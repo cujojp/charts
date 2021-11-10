@@ -62,6 +62,9 @@ typings/
 
 # npm build output
 dist
-docs/assets/
 
 .DS_Store
+.prettierignore
+.prettierrc
+.prettierrc.json
+package-lock.json
