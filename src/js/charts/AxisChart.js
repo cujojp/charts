@@ -66,8 +66,6 @@ export default class AxisChart extends BaseChart {
             this.config.yAxisMode = axisOptions.yAxisMode || 'span';
         }
 
-        // debugger;
-
         this.config.xIsSeries = axisOptions.xIsSeries || 0;
         this.config.shortenYAxisNumbers = axisOptions.shortenYAxisNumbers || 0;
 
@@ -137,6 +135,9 @@ export default class AxisChart extends BaseChart {
                 intervalHeight = getIntervalSize(yPts) * scaleMultiplier;
                 zeroLine = this.height - getZeroIndex(yPts) * intervalHeight;
                 positions = yPts.map((d) => zeroLine - d * scaleMultiplier);
+
+                debugger;
+
                 const yAxisConfigObject =
                     this.config.yAxisConfig.filter((item) => key === item.id) || [];
                 const yAxisAlignment = yAxisConfigObject.length
@@ -151,7 +152,6 @@ export default class AxisChart extends BaseChart {
                         yPtsArray.push(Math.ceil(pos / scaleMultiplier));
                     });
 
-                    scaleMultiplier = firstArr.scaleMultiplier;
                     zeroLine = firstArr.zeroLine;
                     yPts = yPtsArray.reverse();
                     positions = firstArr.positions;
@@ -179,11 +179,22 @@ export default class AxisChart extends BaseChart {
     calcDatasetPoints() {
         let s = this.state;
         console.log(this.state);
-        let scaleAll = (values) => values.map((val) => scale(val, s.yAxis));
+        let scaleAll = (values, id) => {
+            return values.map((val) => {
+                let { yAxis } = s;
+
+                if (yAxis instanceof Array) {
+                    yAxis = yAxis.find((axis) => id === axis.axisID);
+                }
+
+                return scale(val, yAxis);
+            });
+        };
 
         s.datasets = this.data.datasets.map((d, i) => {
             let values = d.values;
             let cumulativeYs = d.cumulativeYs || [];
+
             return {
                 name:
                     d.name &&
@@ -194,10 +205,11 @@ export default class AxisChart extends BaseChart {
                 chartType: d.chartType,
 
                 values: values,
-                yPositions: scaleAll(values),
+                yPositions: scaleAll(values, d.axisID),
+                id: d.axisID,
 
                 cumulativeYs: cumulativeYs,
-                cumulativeYPos: scaleAll(cumulativeYs)
+                cumulativeYPos: scaleAll(cumulativeYs, d.axisID)
             };
         });
     }
@@ -208,6 +220,7 @@ export default class AxisChart extends BaseChart {
             s.yExtremes = s.datasets[s.datasets.length - 1].cumulativeYPos;
             return;
         }
+
         s.yExtremes = new Array(s.datasetLength).fill(9999);
         s.datasets.map((d) => {
             d.yPositions.map((pos, j) => {
@@ -258,7 +271,11 @@ export default class AxisChart extends BaseChart {
         // datasets since we are trying to run two yAxis.
         if (multiAxis) {
             this.data.datasets.map((d) => {
-                allValueLists[d.axisID || key] = d[key];
+                // if the array exists already just push more data into it.
+                // otherwise create a new array into the object.
+                allValueLists[d.axisID || key]
+                    ? allValueLists[d.axisID || key].push(...d[key])
+                    : (allValueLists[d.axisID || key] = d[key]);
             });
             console.log('multiAxis!', allValueLists, this.data.datasets);
         } else {
@@ -277,7 +294,6 @@ export default class AxisChart extends BaseChart {
             });
         }
 
-        console.log('getAllYValues', multiAxis, allValueLists);
         return multiAxis ? allValueLists : [].concat(...allValueLists);
     }
 
@@ -362,12 +378,20 @@ export default class AxisChart extends BaseChart {
                 },
                 function () {
                     let s = this.state;
+                    let { yAxis } = s;
                     let d = s.datasets[index];
+                    let { id = 'left-axis' } = d;
                     let stacked = this.barOptions.stacked;
 
                     let spaceRatio = this.barOptions.spaceRatio || BAR_CHART_SPACE_RATIO;
                     let barsWidth = s.unitWidth * (1 - spaceRatio);
                     let barWidth = barsWidth / (stacked ? 1 : barDatasets.length);
+
+                    // if there are multiple yAxis we need to return the yAxis with the
+                    // proper ID.
+                    if (yAxis instanceof Array) {
+                        yAxis = yAxis.find((axis) => id === axis.axisID);
+                    }
 
                     let xPositions = s.xAxis.positions.map((x) => x - barsWidth / 2);
                     if (!stacked) {
@@ -395,7 +419,7 @@ export default class AxisChart extends BaseChart {
                         // values: d.values,
                         labels: labels,
 
-                        zeroLine: s.yAxis.zeroLine,
+                        zeroLine: yAxis.zeroLine,
                         barsWidth: barsWidth,
                         barWidth: barWidth
                     };
@@ -405,6 +429,7 @@ export default class AxisChart extends BaseChart {
 
         let lineConfigs = lineDatasets.map((d) => {
             let index = d.index;
+            debugger;
             return [
                 'lineGraph' + '-' + d.index,
                 {
@@ -425,11 +450,16 @@ export default class AxisChart extends BaseChart {
                     let d = s.datasets[index];
 
                     // if we have more than one yindex lets map the values
-                    const yAxis = s.yAxis.length ? s.yAxis[index] : s.yAxis;
+                    const yAxis = s.yAxis.length
+                        ? s.yAxis.find((axis) => d.id === axis.axisID)
+                        : s.yAxis;
+
                     let minLine =
                         yAxis.positions[0] < yAxis.zeroLine
                             ? yAxis.positions[0]
                             : yAxis.zeroLine;
+
+                    debugger;
 
                     return {
                         xPositions: s.xAxis.positions,
@@ -468,7 +498,6 @@ export default class AxisChart extends BaseChart {
             componentConfigs
                 .filter((args) => !optionals.includes(args[0]) || this.state[args[0]])
                 .map((args) => {
-                    if (args[0] == 'yAxis') debugger;
                     let component = getComponent(...args);
                     console.log('componentConfigs - map', args[0]);
                     if (args[0]) {

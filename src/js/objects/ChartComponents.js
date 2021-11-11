@@ -68,8 +68,6 @@ class ChartComponent {
     render(data) {
         this.store = this.makeElements(data);
 
-        debugger;
-
         this.layer.textContent = '';
         this.store.forEach((element) => {
             element.length
@@ -161,12 +159,10 @@ let componentConfigs = {
             let addHoriLine = true;
 
             if (data.length) {
-                debugger;
                 data.forEach((item, i) => {
                     if (i >= 1) addHoriLine = false;
 
                     item.positions.map((position, i) => {
-                        debugger;
                         elements.push(
                             yLine(position, item.labels[i], this.constants.width, {
                                 mode: this.constants.mode,
@@ -192,12 +188,38 @@ let componentConfigs = {
         },
 
         animateElements(newData) {
+            const animateMultipleElements = (oldData, newData) => {
+                let newPos = newData.positions;
+                let newLabels = newData.labels;
+                let oldPos = oldData.positions;
+                let oldLabels = oldData.labels;
+
+                [oldPos, newPos] = equilizeNoOfElements(oldPos, newPos);
+                [oldLabels, newLabels] = equilizeNoOfElements(oldLabels, newLabels);
+
+                this.render({
+                    positions: oldPos,
+                    labels: newLabels
+                });
+
+                return this.store.map((line, i) => {
+                    return translateHoriLine(line, newPos[i], oldPos[i]);
+                });
+            };
+
+            // we will need to animate both axis if we have more than one.
+            // so check if the oldData is an array of values.
+            if (this.oldData instanceof Array) {
+                return this.oldData.forEach((old, i) => {
+                    animateMultipleElements(old, newData[i]);
+                });
+            }
+
             let newPos = newData.positions;
             let newLabels = newData.labels;
             let oldPos = this.oldData.positions;
             let oldLabels = this.oldData.labels;
 
-            debugger;
             [oldPos, newPos] = equilizeNoOfElements(oldPos, newPos);
             [oldLabels, newLabels] = equilizeNoOfElements(oldLabels, newLabels);
 
@@ -473,6 +495,7 @@ let componentConfigs = {
             }
 
             this.units = [];
+
             if (!c.hideDots) {
                 this.units = data.yPositions.map((y, j) => {
                     return datasetDot(
