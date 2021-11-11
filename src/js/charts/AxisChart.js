@@ -136,8 +136,6 @@ export default class AxisChart extends BaseChart {
                 zeroLine = this.height - getZeroIndex(yPts) * intervalHeight;
                 positions = yPts.map((d) => zeroLine - d * scaleMultiplier);
 
-                debugger;
-
                 const yAxisConfigObject =
                     this.config.yAxisConfig.filter((item) => key === item.id) || [];
                 const yAxisAlignment = yAxisConfigObject.length
@@ -178,7 +176,6 @@ export default class AxisChart extends BaseChart {
 
     calcDatasetPoints() {
         let s = this.state;
-        console.log(this.state);
         let scaleAll = (values, id) => {
             return values.map((val) => {
                 let { yAxis } = s;
@@ -191,6 +188,7 @@ export default class AxisChart extends BaseChart {
             });
         };
 
+        s.barChartIndex = 1;
         s.datasets = this.data.datasets.map((d, i) => {
             let values = d.values;
             let cumulativeYs = d.cumulativeYs || [];
@@ -202,6 +200,7 @@ export default class AxisChart extends BaseChart {
                         char == '&' ? '&amp;' : char == '<' ? '&lt;' : '&gt;'
                     ),
                 index: i,
+                barIndex: d.chartType === 'bar' ? s.barChartIndex++ : s.barChartIndex,
                 chartType: d.chartType,
 
                 values: values,
@@ -270,12 +269,12 @@ export default class AxisChart extends BaseChart {
         // this is the trouble maker, we don't want to merge all
         // datasets since we are trying to run two yAxis.
         if (multiAxis) {
-            this.data.datasets.map((d) => {
+            this.data.datasets.forEach((d) => {
                 // if the array exists already just push more data into it.
                 // otherwise create a new array into the object.
                 allValueLists[d.axisID || key]
                     ? allValueLists[d.axisID || key].push(...d[key])
-                    : (allValueLists[d.axisID || key] = d[key]);
+                    : (allValueLists[d.axisID || key] = [...d[key]]);
             });
             console.log('multiAxis!', allValueLists, this.data.datasets);
         } else {
@@ -365,6 +364,7 @@ export default class AxisChart extends BaseChart {
 
         let barsConfigs = barDatasets.map((d) => {
             let index = d.index;
+            let barIndex = d.barIndex || index;
             return [
                 'barGraph' + '-' + d.index,
                 {
@@ -394,8 +394,11 @@ export default class AxisChart extends BaseChart {
                     }
 
                     let xPositions = s.xAxis.positions.map((x) => x - barsWidth / 2);
+
                     if (!stacked) {
-                        xPositions = xPositions.map((p) => p + barWidth * index);
+                        xPositions = xPositions.map((p) => {
+                            return p + barWidth * barIndex;
+                        });
                     }
 
                     let labels = new Array(s.datasetLength).fill('');
@@ -411,6 +414,8 @@ export default class AxisChart extends BaseChart {
                     if (stacked) {
                         offsets = d.yPositions.map((y, j) => y - d.cumulativeYPos[j]);
                     }
+
+                    debugger;
 
                     return {
                         xPositions: xPositions,
@@ -429,7 +434,6 @@ export default class AxisChart extends BaseChart {
 
         let lineConfigs = lineDatasets.map((d) => {
             let index = d.index;
-            debugger;
             return [
                 'lineGraph' + '-' + d.index,
                 {
@@ -458,8 +462,6 @@ export default class AxisChart extends BaseChart {
                         yAxis.positions[0] < yAxis.zeroLine
                             ? yAxis.positions[0]
                             : yAxis.zeroLine;
-
-                    debugger;
 
                     return {
                         xPositions: s.xAxis.positions,
