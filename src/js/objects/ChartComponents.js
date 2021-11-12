@@ -72,7 +72,6 @@ class ChartComponent {
         this.store.forEach((element) => {
             element.length
                 ? element.forEach((el) => {
-                      console.log(el, this.layer);
                       this.layer.appendChild(el);
                   })
                 : this.layer.appendChild(element);

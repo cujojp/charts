@@ -112,7 +112,6 @@ export default class AxisChart extends BaseChart {
 
     calcYAxisParameters(dataValues, withMinimum = 'false') {
         let yPts, scaleMultiplier, intervalHeight, zeroLine, positions;
-        console.log('calcYAxisParameters', dataValues);
 
         // if we have an object we have multiple yAxisParameters.
         if (dataValues instanceof Array) {
@@ -129,7 +128,6 @@ export default class AxisChart extends BaseChart {
         } else {
             this.state.yAxis = [];
             for (let key in dataValues) {
-                console.log('looping dataValues', key, dataValues[key]);
                 yPts = calcChartIntervals(dataValues[key], withMinimum);
                 scaleMultiplier = this.height / getValueRange(yPts);
                 intervalHeight = getIntervalSize(yPts) * scaleMultiplier;
@@ -149,9 +147,8 @@ export default class AxisChart extends BaseChart {
                     firstArr.positions.forEach((pos) => {
                         yPtsArray.push(Math.ceil(pos / scaleMultiplier));
                     });
-
-                    zeroLine = firstArr.zeroLine;
                     yPts = yPtsArray.reverse();
+                    zeroLine = this.height - getZeroIndex(yPts) * intervalHeight;
                     positions = firstArr.positions;
                 }
 
@@ -165,8 +162,6 @@ export default class AxisChart extends BaseChart {
                 });
             }
         }
-
-        console.log('final state.yAxis', this.state.yAxis);
 
         // Dependent if above changes
         this.calcDatasetPoints();
@@ -257,13 +252,35 @@ export default class AxisChart extends BaseChart {
         let multiAxis = this.config.yAxisConfig ? true : false;
         let allValueLists = multiAxis ? {} : [];
 
+        let groupBy = (arr, property) => {
+            return arr.reduce((acc, cur) => {
+                acc[cur[property]] = [...(acc[cur[property]] || []), cur];
+                return acc;
+            }, {});
+        };
+
+        let generateCumulative = (arr) => {
+            let cumulative = new Array(this.state.datasetLength).fill(0);
+            arr.forEach((d, i) => {
+                let values = arr[i].values;
+                d[key] = cumulative = cumulative.map((c, i) => {
+                    return c + values[i];
+                });
+            });
+        };
+
         if (this.barOptions.stacked) {
             key = 'cumulativeYs';
-            let cumulative = new Array(this.state.datasetLength).fill(0);
-            this.data.datasets.map((d, i) => {
-                let values = this.data.datasets[i].values;
-                d[key] = cumulative = cumulative.map((c, i) => c + values[i]);
-            });
+            // we need to filter out the different yAxis ID's here.
+            if (multiAxis) {
+                const groupedDataSets = groupBy(this.data.datasets, 'axisID');
+                // const dataSetsByAxis = this.data.dd
+                for (var axisID in groupedDataSets) {
+                    generateCumulative(groupedDataSets[axisID]);
+                }
+            } else {
+                generateCumulative(this.data.datasets);
+            }
         }
 
         // this is the trouble maker, we don't want to merge all
@@ -276,7 +293,6 @@ export default class AxisChart extends BaseChart {
                     ? allValueLists[d.axisID || key].push(...d[key])
                     : (allValueLists[d.axisID || key] = [...d[key]]);
             });
-            console.log('multiAxis!', allValueLists, this.data.datasets);
         } else {
             allValueLists = this.data.datasets.map((d) => {
                 return d[key];
@@ -397,7 +413,7 @@ export default class AxisChart extends BaseChart {
 
                     if (!stacked) {
                         xPositions = xPositions.map((p) => {
-                            return p + barWidth * barIndex;
+                            return p + barWidth * barIndex - barWidth;
                         });
                     }
 
@@ -414,8 +430,6 @@ export default class AxisChart extends BaseChart {
                     if (stacked) {
                         offsets = d.yPositions.map((y, j) => y - d.cumulativeYPos[j]);
                     }
-
-                    debugger;
 
                     return {
                         xPositions: xPositions,
@@ -494,14 +508,11 @@ export default class AxisChart extends BaseChart {
         let optionals = ['yMarkers', 'yRegions'];
         this.dataUnitComponents = [];
 
-        console.log('componentConfigs', componentConfigs);
-
         this.components = new Map(
             componentConfigs
                 .filter((args) => !optionals.includes(args[0]) || this.state[args[0]])
                 .map((args) => {
                     let component = getComponent(...args);
-                    console.log('componentConfigs - map', args[0]);
                     if (args[0]) {
                         if (args[0].includes('lineGraph') || args[0].includes('barGraph')) {
                             this.dataUnitComponents.push(component);
