@@ -128,16 +128,17 @@ export default class AxisChart extends BaseChart {
         } else {
             this.state.yAxis = [];
             for (let key in dataValues) {
-                yPts = calcChartIntervals(dataValues[key], withMinimum);
+                const dataValue = dataValues[key];
+                yPts = calcChartIntervals(dataValue, withMinimum);
                 scaleMultiplier = this.height / getValueRange(yPts);
                 intervalHeight = getIntervalSize(yPts) * scaleMultiplier;
                 zeroLine = this.height - getZeroIndex(yPts) * intervalHeight;
                 positions = yPts.map((d) => zeroLine - d * scaleMultiplier);
 
                 const yAxisConfigObject =
-                    this.config.yAxisConfig.filter((item) => key === item.id) || [];
-                const yAxisAlignment = yAxisConfigObject.length
-                    ? yAxisConfigObject[0].position
+                    this.config.yAxisConfig.find((item) => key === item.id) || [];
+                const yAxisAlignment = yAxisConfigObject
+                    ? yAxisConfigObject.position
                     : 'right';
 
                 if (this.state.yAxis.length) {
@@ -155,6 +156,7 @@ export default class AxisChart extends BaseChart {
                 this.state.yAxis.push({
                     axisID: key || 'left-axis',
                     labels: yPts,
+                    title: yAxisConfigObject.title,
                     pos: yAxisAlignment,
                     scaleMultiplier,
                     zeroLine,

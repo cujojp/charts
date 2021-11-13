@@ -418,6 +418,30 @@ function makeHoriLine(y, label, x1, x2, options = {}) {
     return line;
 }
 
+export function generateAxisLabel(options) {
+    if (!options.title) return;
+
+    const x = options.position === 'left' ? LABEL_MARGIN : options.width;
+    // - getStringWidth(options.title, 5);
+    const rotation =
+        options.position === 'right'
+            ? `rotate(90, ${options.width}, ${options.height / 2})`
+            : `rotate(270, 0, ${options.height / 2})`;
+
+    const labelSvg = createSVG('text', {
+        className: 'chart-label',
+        x: x - getStringWidth(options.title, 5) / 2,
+        y: options.height / 2 - LABEL_MARGIN,
+        dy: FONT_SIZE / -2 + 'px',
+        'font-size': FONT_SIZE + 'px',
+        'text-anchor': 'start',
+        transform: rotation,
+        innerHTML: options.title + ''
+    });
+
+    return labelSvg;
+}
+
 export function yLine(y, label, width, options = {}) {
     if (!isValidNumber(y)) y = 0;
 

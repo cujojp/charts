@@ -35,6 +35,7 @@ export default class BaseChart {
         this.realData = this.prepareData(options.data);
         this.data = this.prepareFirstData(this.realData);
 
+        console.log('BaseChart', this.realData, this.data);
         this.colors = this.validateColors(options.colors, this.type);
 
         this.config = {

@@ -4,6 +4,7 @@ import {
     makePath,
     xLine,
     yLine,
+    generateAxisLabel,
     yMarker,
     yRegion,
     datasetBar,
@@ -155,22 +156,29 @@ let componentConfigs = {
         layerClass: 'y axis',
         makeElements(data) {
             let elements = [];
-            let addHoriLine = true;
 
             if (data.length) {
                 data.forEach((item, i) => {
-                    if (i >= 1) addHoriLine = false;
-
                     item.positions.map((position, i) => {
                         elements.push(
                             yLine(position, item.labels[i], this.constants.width, {
                                 mode: this.constants.mode,
                                 pos: item.pos || this.constants.pos,
-                                shortenNumbers: this.constants.shortenNumbers,
-                                addHoriLine
+                                shortenNumbers: this.constants.shortenNumbers
                             })
                         );
                     });
+                    // we need to make yAxis titles if they are defined
+                    if (item.title) {
+                        elements.push(
+                            generateAxisLabel({
+                                title: item.title,
+                                position: item.pos,
+                                height: item.zeroLine,
+                                width: this.constants.width
+                            })
+                        );
+                    }
                 });
 
                 return elements;
@@ -180,8 +188,7 @@ let componentConfigs = {
                 return yLine(position, data.labels[i], this.constants.width, {
                     mode: this.constants.mode,
                     pos: this.constants.pos,
-                    shortenNumbers: this.constants.shortenNumbers,
-                    addHoriLine
+                    shortenNumbers: this.constants.shortenNumbers
                 });
             });
         },
